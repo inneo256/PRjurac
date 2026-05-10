@@ -1,0 +1,4 @@
+body { font-family: Arial, sans-serif; padding: 20px; }
+input, select { margin: 5px; }
+table { width: 100%; margin-top: 20px; }
+th, td { padding: 10px; text-align: left; }

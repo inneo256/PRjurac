@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ToDo List</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1>ToDo List</h1>
+
+<input type="text" id="title" placeholder="Task title">
+<input type="text" id="description" placeholder="Task description">
+<button onclick="addTask()">Add Task</button>
+
+<table border="1" id="tasks-table">
+<tr>
+    <th>ID</th>
+    <th>Title</th>
+    <th>Description</th>
+    <th>Status</th>
+    <th>Actions</th>
+</tr>
+</table>
+
+
+
+
+<h2>Отправить Email</h2>
+<input type="email" id="emailTo" placeholder="Кому">
+<input type="text" id="emailSubject" placeholder="Тема">
+<textarea id="emailText" placeholder="Сообщение"></textarea>
+<button onclick="sendEmail()">Отправить</button>
+
+<h2>Письма</h2>
+<table border="1" id="emails-table">
+<tr>
+  <th>From</th>
+  <th>Subject</th>
+  <th>Date</th>
+</tr>
+</table>
+
+<button onclick="loadEmails()">Загрузить письма</button>
+
+<pre id="emails-output"></pre>
+<script>
+//lab 4: функция отправки письма через бэкенд
+async function sendEmail() {
+    const to = document.getElementById('emailTo').value;
+    const subject = document.getElementById('emailSubject').value;
+    const text = document.getElementById('emailText').value;
+
+    try {
+        const res = await fetch('http://localhost:3005/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to, subject, text })
+        });
+
+        const data = await res.json();
+        alert(data.message || data.error);
+    } catch (err) {
+        alert('Ошибка при отправке: ' + err.message);
+    }
+}
+
+async function loadEmails() {
+    const res = await fetch('http://localhost:3005/emails');
+    const emails = await res.json();
+
+    const table = document.getElementById('emails-table');
+
+    table.innerHTML = `
+        <tr>
+            <th>From</th>
+            <th>Subject</th>
+            <th>Date</th>
+        </tr>
+    `;
+
+    emails.forEach(email => {
+        table.innerHTML += `
+            <tr>
+                <td>${email.from[0]}</td>
+                <td>${email.subject[0]}</td>
+                <td>${email.date[0]}</td>
+            </tr>
+        `;
+    });
+}
+
+</script>
+<script src="app.js"></script>
+</body>
+</html>
