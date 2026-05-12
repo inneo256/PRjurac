@@ -1,0 +1,99 @@
+name: Docker CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  docker-ci:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./to-do-list
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          docker build -t todo-db ./db
+          docker build -t todo-backend ./backend
+          docker build -t todo-frontend ./frontend
+
+      - name: Create Docker network
+        run: docker network create todo-net
+
+      - name: Run database container
+        run: |
+          docker run -d \
+            --name todo-db \
+            --network todo-net \
+            -e MYSQL_ROOT_PASSWORD=root \
+            -e MYSQL_DATABASE=todo_db \
+            -p 3308:3306 \
+            todo-db
+
+      - name: Wait for database
+        run: sleep 25
+
+      - name: Run backend container
+        run: |
+          docker run -d \
+            --name todo-backend \
+            --network todo-net \
+            -p 3005:3001 \
+            -e DB_HOST=todo-db \
+            -e DB_PORT=3306 \
+            -e DB_USER=root \
+            -e DB_PASSWORD=root \
+            -e DB_NAME=todo_db \
+            todo-backend
+
+      - name: Run frontend container
+        run: |
+          docker run -d \
+            --name todo-frontend \
+            --network todo-net \
+            -p 3000:80 \
+            todo-frontend
+
+      - name: Wait for services
+        run: sleep 10
+
+      - name: Check backend endpoint
+        run: curl -f http://localhost:3005/tasks
+
+      - name: Check frontend endpoint
+        run: curl -f http://localhost:3000
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push backend image
+        run: |
+          docker tag todo-backend ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:latest
+
+      - name: Push frontend image
+        run: |
+          docker tag todo-frontend ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:latest
+
+      - name: Push database image
+        run: |
+          docker tag todo-db ${{ secrets.DOCKERHUB_USERNAME }}/todo-db:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-db:latest
+
+      - name: Stop and clean containers
+        if: always()
+        run: |
+          docker rm -f todo-db todo-backend todo-frontend || true
+          docker network rm todo-net || true
+          docker system prune -f

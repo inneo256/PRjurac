@@ -2,17 +2,36 @@ const express = require('express');
 const mysql = require('mysql2');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+
+const server = http.createServer(app);
 app.use(cors());
 app.use(bodyParser.json());
 
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST", "PUT", "DELETE"]
+    }
+});
+
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
+
 // Подключение к БД
 const db = mysql.createPool({
-    host: 'db',
-    user: 'root',
-    password: 'root',
-    database: 'todo_db'
+    host: process.env.DB_HOST || 'todo-db',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'root',
+    database: process.env.DB_NAME || 'todo_db'
 });
 
 
@@ -36,6 +55,7 @@ app.post('/tasks', (req, res) => {
     const { title, description } = req.body;
     db.query('INSERT INTO tasks (title, description) VALUES (?, ?)', [title, description], (err, results) => {
         if(err) return res.status(500).send(err);
+         io.emit('tasksUpdated');
         res.json({ id: results.insertId, title, description, status: 'pending' });
     });
 });
@@ -48,6 +68,7 @@ app.put('/tasks/:id', (req, res) => {
         [title, description, status, req.params.id],
         (err) => {
             if(err) return res.status(500).send(err);
+            io.emit('tasksUpdated');
             res.json({ message: 'Task updated' });
         }
     );
@@ -57,13 +78,14 @@ app.put('/tasks/:id', (req, res) => {
 app.delete('/tasks/:id', (req, res) => {
     db.query('DELETE FROM tasks WHERE id = ?', [req.params.id], (err) => {
         if(err) return res.status(500).send(err);
+         io.emit('tasksUpdated');
         res.json({ message: 'Task deleted' });
     });
 });
 
 
 
-//lab 4
+
 const { sendEmail } = require('./email');
 const { fetchEmails } = require('./emailService');
 
@@ -121,4 +143,4 @@ app.get('/pop3-check', (req, res) => {
         res.status(500).json({ error: err.message });
     });
 });
-app.listen(3001, () => console.log('Backend running on port 3001'));
+server.listen(3001, () => console.log('Backend running on port 3001'));

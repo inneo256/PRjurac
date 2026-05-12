@@ -1,3 +1,13 @@
+const socket = io('http://localhost:3005');
+
+socket.on('connect', () => {
+    console.log('Connected to WebSocket server');
+});
+
+socket.on('tasksUpdated', () => {
+    fetchTasks();
+});
+
 const API_URL = 'http://localhost:3005/tasks';
 
 async function fetchTasks() {
