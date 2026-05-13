@@ -16,9 +16,9 @@ jobs:
 
       - name: Build Docker images
         run: |
-          docker build -t todo-db ./to-do-list/db
-          docker build -t todo-backend ./to-do-list/backend
-          docker build -t todo-frontend ./to-do-list/frontend
+          docker build -t todo-db ./PRjurac/to-do-list/db
+          docker build -t todo-backend ./PRjurac/to-do-list/backend
+          docker build -t todo-frontend ./PRjurac/to-do-list/frontend
 
       - name: Create Docker network
         run: docker network create todo-net
